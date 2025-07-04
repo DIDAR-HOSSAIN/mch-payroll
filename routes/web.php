@@ -48,10 +48,9 @@ use Inertia\Inertia;
 // Route::get('/check/env', [MikrotikController::class, 'checkEnv']);
 // Route::post('/mikrotik/firewall', MikroTikController::class);
 
+Route::get('/attendance/report', [AttendanceController::class, 'report'])->name('attendance.report');
 Route::get('/attendance/sync', [AttendanceController::class, 'sync']);
-
-Route::get('/attendance/summary/{uid}', [AttendanceController::class, 'attendanceSummary']);
-
+Route::resource('/attendance', AttendanceController::class);
 
 Route::resource('general/members', GeneralMemberController::class);
 

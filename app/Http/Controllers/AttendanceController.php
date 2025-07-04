@@ -5,6 +5,8 @@ namespace App\Http\Controllers;
 use App\Models\Attendance;
 use App\Http\Requests\StoreAttendanceRequest;
 use App\Http\Requests\UpdateAttendanceRequest;
+use Illuminate\Http\Request;
+use Inertia\Inertia;
 use MehediJaman\LaravelZkteco\LaravelZkteco;
 
 class AttendanceController extends Controller
@@ -14,7 +16,7 @@ class AttendanceController extends Controller
      */
     public function index()
     {
-        //
+        // return inertia('AttendanceReport');
     }
 
     /**
@@ -67,31 +69,77 @@ class AttendanceController extends Controller
 
     public function sync()
     {
-      $zk = new LaravelZkteco('192.168.1.50');
+        $zk = new LaravelZkteco('192.168.1.50');
 
-    if ($zk->connect()) {
-        $data = $zk->getAttendance();
+        if ($zk->connect()) {
+            $data = $zk->getAttendance();
 
-        foreach ($data as $entry) {
-            // Check if already exists to avoid duplicates
-            $exists = Attendance::where('uid', $entry['uid'])
-                ->where('timestamp', $entry['timestamp'])
-                ->exists();
+            foreach ($data as $entry) {
+                // Check if already exists to avoid duplicates
+                $exists = Attendance::where('uid', $entry['uid'])
+                    ->where('timestamp', $entry['timestamp'])
+                    ->exists();
 
-            if (!$exists) {
-                Attendance::create([
-                    'uid' => $entry['uid'],
-                    'employee_id' => $entry['id'],
-                    'state' => $entry['state'],
-                    'timestamp' => $entry['timestamp'],
-                    'type' => $entry['type'],
-                ]);
+                if (!$exists) {
+                    Attendance::create([
+                        'uid' => $entry['uid'],
+                        'employee_id' => $entry['id'],
+                        'state' => $entry['state'],
+                        'timestamp' => $entry['timestamp'],
+                        'type' => $entry['type'],
+                    ]);
+                }
             }
+
+            return response()->json(['message' => 'Attendance synced successfully.']);
         }
 
-        return response()->json(['message' => 'Attendance synced successfully.']);
+        return response()->json(['error' => 'Unable to connect to device'], 500);
     }
 
-    return response()->json(['error' => 'Unable to connect to device'], 500);
+    public function report(Request $request)
+    {
+        $filterDate = $request->date ?? now()->toDateString();
+
+        $attendanceData = Attendance::select('employee_id', 'timestamp')
+            ->whereDate('timestamp', $filterDate)
+            ->orderBy('timestamp')
+            ->get()
+            ->groupBy(fn($item) => $item->employee_id);
+
+        $report = [];
+
+        foreach ($attendanceData as $employeeId => $entries) {
+            $first = $entries->first();
+            $last = $entries->last();
+            $date = date('Y-m-d', strtotime($first->timestamp));
+            $inTime = $first->timestamp;
+            $outTime = $last->timestamp;
+            $status = 'Present';
+
+            $expectedStart = strtotime($date . ' 09:00:00');
+            $actualIn = strtotime($inTime);
+
+            if ($actualIn > $expectedStart + 300) {
+                $status = 'Late';
+            }
+
+            if ($inTime === $outTime) {
+                $status = 'Absent';
+            }
+
+            $report[] = [
+                'employee_id' => $employeeId,
+                'date' => $date,
+                'in_time' => $inTime,
+                'out_time' => $outTime,
+                'status' => $status,
+            ];
+        }
+
+        return Inertia::render('Payroll/PayrollReport', [
+            'reportData' => $report,
+        ]);
     }
+
 }
