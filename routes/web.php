@@ -6,6 +6,7 @@ use App\Http\Controllers\CategoryController;
 use App\Http\Controllers\ContactController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\DonorMemberController;
+use App\Http\Controllers\EmployeeController;
 use App\Http\Controllers\GeneralMemberController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\HomeController;
@@ -13,6 +14,7 @@ use App\Http\Controllers\OrderController;
 use App\Http\Controllers\PermissionController;
 use App\Http\Controllers\ProductController;
 use App\Http\Controllers\RoleController;
+use App\Http\Controllers\RosterController;
 use App\Http\Controllers\SliderController;
 use App\Http\Controllers\UserController;
 use Illuminate\Support\Facades\Route;
@@ -48,9 +50,14 @@ use Inertia\Inertia;
 // Route::get('/check/env', [MikrotikController::class, 'checkEnv']);
 // Route::post('/mikrotik/firewall', MikroTikController::class);
 
-Route::get('/attendance/report', [AttendanceController::class, 'report'])->name('attendance.report');
 Route::get('/attendance/sync', [AttendanceController::class, 'sync']);
+Route::get('/attendance/report', [AttendanceController::class, 'report'])->name('attendance.report');
 Route::resource('/attendance', AttendanceController::class);
+Route::post('/manual-attendance', [AttendanceController::class, 'storeManual'])->name('manual.attendance.store');
+Route::resource('employees', EmployeeController::class);
+Route::resource('rosters', RosterController::class);
+
+
 
 Route::resource('general/members', GeneralMemberController::class);
 

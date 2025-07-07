@@ -10,14 +10,16 @@ class Attendance extends Model
     use HasFactory;
 
     protected $fillable = [
-        'uid',
         'employee_id',
-        'state',
-        'timestamp',
-        'type',
+        'date',
+        'in_time',
+        'out_time',
+        'status',
+        'source'
     ];
 
-    protected $casts = [
-        'timestamp' => 'datetime',
-    ];
+    public function employee()
+    {
+        return $this->belongsTo(Employee::class);
+    }
 }

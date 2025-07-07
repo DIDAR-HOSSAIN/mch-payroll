@@ -11,14 +11,10 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('attendances', function (Blueprint $table) {
+        Schema::create('rosters', function (Blueprint $table) {
             $table->id();
-            $table->unsignedBigInteger('employee_id');
-            $table->date('date');
-            $table->time('in_time');
-            $table->time('out_time');
-            $table->string('status')->default('Present');
-            $table->string('source')->default('device');
+            $table->time('office_start')->default('09:00:00');
+            $table->time('office_end')->default('17:00:00');
             $table->timestamps();
         });
     }
@@ -28,6 +24,6 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::dropIfExists('attendances');
+        Schema::dropIfExists('rosters');
     }
 };
