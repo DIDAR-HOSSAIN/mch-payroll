@@ -10,6 +10,7 @@ const SidebarMenu = () => {
         donorDropdown: false,
         sliderDropdown: false,
         categoryDropdown: false,
+        payrollDropdown: false,
         settings: false,
     });
 
@@ -162,6 +163,33 @@ const SidebarMenu = () => {
                         className="hover:bg-yellow-200 font-bold btn btn-blue rounded"
                     >
                         Manage Category
+                    </Link>
+                </div>
+            )}
+
+            <div className="flex">
+                <button
+                    onClick={() => toggleDropdown("payrollDropdown")}
+                    className="bg-blue-400 hover:bg-white font-bold btn w-full text-lg rounded"
+                >
+                    {dropdownState.payrollDropdown
+                        ? "Payroll ▲"
+                        : "Payroll ▼"}
+                </button>
+            </div>
+            {dropdownState.payrollDropdown && (
+                <div className="flex flex-col gap-1">
+                    <Link
+                        href="/attendance/sync/create"
+                        className="hover:bg-yellow-200 font-bold btn btn-blue rounded"
+                    >
+                        Add Payroll
+                    </Link>
+                    <Link
+                        href="/attendance/report"
+                        className="hover:bg-yellow-200 font-bold btn btn-blue rounded"
+                    >
+                        Manage Payroll
                     </Link>
                 </div>
             )}

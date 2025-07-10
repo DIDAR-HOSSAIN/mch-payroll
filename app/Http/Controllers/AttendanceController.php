@@ -25,7 +25,11 @@ class AttendanceController extends Controller
      */
     public function create()
     {
-        //
+        $employees = Employee::all();
+
+        return Inertia::render('Payroll/ManualAttendance', [
+            'employees' => $employees,
+        ]);
     }
 
     /**
@@ -33,7 +37,26 @@ class AttendanceController extends Controller
      */
     public function store(StoreAttendanceRequest $request)
     {
-        //
+        $request->validate([
+            'employee_id' => 'required|exists:employees,id',
+            'date' => 'required|date',
+            'in_time' => 'required|date_format:H:i',
+            'out_time' => 'required|date_format:H:i|after_or_equal:in_time',
+        ]);
+
+        $status = $request->in_time === $request->out_time ? 'Absent' : 'Present';
+
+        Attendance::updateOrCreate([
+            'employee_id' => $request->employee_id,
+            'date' => $request->date,
+        ], [
+            'in_time' => $request->in_time,
+            'out_time' => $request->out_time,
+            'source' => 'manual',
+            'status' => $status,
+        ]);
+
+        return redirect()->route('attendance.index')->with('success', 'Manual attendance saved.');
     }
 
     /**
@@ -66,6 +89,11 @@ class AttendanceController extends Controller
     public function destroy(Attendance $attendance)
     {
         //
+    }
+
+    public function syncCreate()
+    {
+        return Inertia::render('Payroll/DataPull');
     }
 
     public function sync()
@@ -126,28 +154,6 @@ class AttendanceController extends Controller
         return back()->with('success', 'Attendance synced and employees/roster created dynamically.');
     }
 
-
-    public function storeManual(Request $request)
-    {
-        $request->validate([
-            'employee_id' => 'required|exists:employees,id',
-            'date' => 'required|date',
-            'in_time' => 'required',
-            'out_time' => 'required',
-        ]);
-
-        Attendance::updateOrCreate([
-            'employee_id' => $request->employee_id,
-            'date' => $request->date,
-        ], [
-            'in_time' => $request->in_time,
-            'out_time' => $request->out_time,
-            'source' => 'manual',
-            'status' => 'Present',
-        ]);
-
-        return back()->with('success', 'Manual attendance saved.');
-    }
 
     public function report(Request $request)
     {
