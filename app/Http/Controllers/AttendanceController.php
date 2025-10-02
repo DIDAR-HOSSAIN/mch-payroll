@@ -6,6 +6,7 @@ use App\Models\Attendance;
 use App\Http\Requests\StoreAttendanceRequest;
 use App\Http\Requests\UpdateAttendanceRequest;
 use App\Models\Employee;
+use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use MehediJaman\LaravelZkteco\LaravelZkteco;
@@ -98,7 +99,7 @@ class AttendanceController extends Controller
 
     public function sync()
     {
-        $zk = new \MehediJaman\LaravelZkteco\LaravelZkteco('192.168.1.50');
+        $zk = new \MehediJaman\LaravelZkteco\LaravelZkteco('192.168.1.40');
 
         if (!$zk->connect()) {
             return back()->with('error', 'Unable to connect to device.');
@@ -155,36 +156,61 @@ class AttendanceController extends Controller
     }
 
 
+
+
     public function report(Request $request)
     {
         $filterDate = $request->date ?? now()->toDateString();
 
-        $attendances = Attendance::with(['employee', 'employee.roster'])
-            ->where('date', $filterDate)
-            ->get();
+        // Step 1: Fetch all employees
+        $allEmployees = Employee::with('roster')->get();
 
-        $report = $attendances->map(function ($att) {
-            $employee = $att->employee;
+        // Step 2: Fetch attendances only for the selected date
+        $attendances = Attendance::where('date', $filterDate)->get()->keyBy('employee_id');
+
+        // Step 3: Build report for all employees
+        $report = $allEmployees->map(function ($employee) use ($attendances, $filterDate) {
+            $attendance = $attendances->get($employee->id);
+
             $rosterStart = $employee?->roster?->office_start ?? '09:00:00';
+            $rosterEnd = $employee?->roster?->office_end ?? '17:00:00';
 
-            $status = $att->status;
-
-            if ($att->in_time > $rosterStart) {
-                $status = 'Late';
+            if (!$attendance) {
+                return [
+                    'employee_id' => $employee->id,
+                    'name' => $employee->name,
+                    'date' => $filterDate,
+                    'in_time' => null,
+                    'out_time' => null,
+                    'status' => 'Absent',
+                    'source' => null,
+                ];
             }
 
-            if ($att->in_time === $att->out_time) {
+            // If attendance is found, calculate status
+            $inTime = Carbon::parse($attendance->in_time);
+            $outTime = Carbon::parse($attendance->out_time);
+            $rosterStartTime = Carbon::parse($rosterStart);
+            $rosterEndTime = Carbon::parse($rosterEnd);
+
+            if ($inTime->eq($outTime)) {
                 $status = 'Absent';
+            } elseif ($inTime->gt($rosterStartTime)) {
+                $status = 'Late';
+            } elseif ($outTime->lt($rosterEndTime)) {
+                $status = 'Left Early';
+            } else {
+                $status = 'Present';
             }
 
             return [
-                'employee_id' => $att->employee_id,
-                'name' => $employee?->name ?? 'N/A',
-                'date' => $att->date,
-                'in_time' => $att->in_time,
-                'out_time' => $att->out_time,
+                'employee_id' => $employee->id,
+                'name' => $employee->name,
+                'date' => $attendance->date,
+                'in_time' => $attendance->in_time,
+                'out_time' => $attendance->out_time,
                 'status' => $status,
-                'source' => $att->source,
+                'source' => $attendance->source,
             ];
         });
 
@@ -194,4 +220,54 @@ class AttendanceController extends Controller
     }
 
 
+
+    // public function report(Request $request)
+    // {
+    //     $filterDate = $request->date ?? now()->toDateString();
+
+    //     $attendances = Attendance::with(['employee', 'employee.roster'])
+    //         ->where('date', $filterDate)
+    //         ->get();
+
+    //     $report = $attendances->map(function ($att) {
+    //         $employee = $att->employee;
+
+    //         $rosterStart = $employee?->roster?->office_start ?? '09:00:00';
+    //         $rosterEnd = $employee?->roster?->office_end ?? '17:00:00';
+
+    //         $status = $att->status;
+
+    //         $inTime = Carbon::parse($att->in_time);
+    //         $outTime = Carbon::parse($att->out_time);
+    //         $rosterStartTime = Carbon::parse($rosterStart);
+    //         $rosterEndTime = Carbon::parse($rosterEnd);
+
+    //         // Allow 5 minutes grace
+    //         $graceStart = $rosterStartTime->copy()->addMinutes(5);
+
+    //         if ($inTime > $graceStart) {
+    //             $status = 'Late';
+    //         } elseif ($inTime->eq($outTime)) {
+    //             $status = 'Absent';
+    //         } elseif ($outTime < $rosterEndTime) {
+    //             $status = 'Left Early';
+    //         } else {
+    //             $status = 'Present';
+    //         }
+
+    //         return [
+    //             'employee_id' => $att->employee_id,
+    //             'name' => $employee?->name ?? 'N/A',
+    //             'date' => $att->date,
+    //             'in_time' => $att->in_time,
+    //             'out_time' => $att->out_time,
+    //             'status' => $status,
+    //             'source' => $att->source,
+    //         ];
+    //     });
+
+    //     return Inertia::render('Payroll/PayrollReport', [
+    //         'reportData' => $report,
+    //     ]);
+    // }
 }

@@ -54,7 +54,13 @@ const PayrollReport = ({ reportData = [] }) => {
                             <td className="border p-2">{item.date}</td>
                             <td className="border p-2">{item.in_time}</td>
                             <td className="border p-2">{item.out_time}</td>
-                            <td className={`border p-2 ${item.status === 'Late' ? 'text-red-500' : ''}`}>{item.status}</td>
+                            <td className={`border p-2 ${item.status === 'Late' ? 'text-red-500' :
+                                item.status === 'Early Leave' ? 'text-orange-500' :
+                                    item.status === 'Absent' ? 'text-gray-500' :
+                                        'text-green-600'
+                                }`}>
+                                {item.status}
+                            </td>
                             <td className="border p-2">{item.source}</td>
                         </tr>
                     ))}
